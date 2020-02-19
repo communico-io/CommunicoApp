@@ -1,0 +1,171 @@
+"definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "For_each": {
+                "actions": {
+                    "Condition": {
+                        "actions": {
+                            "Create_blob": {
+                                "inputs": {
+                                    "body": "@base64ToBinary(items('For_each')?['ContentBytes'])",
+                                    "host": {
+                                        "connection": {
+                                            "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                        }
+                                    },
+                                    "method": "post",
+                                    "path": "/datasets/default/files",
+                                    "queries": {
+                                        "folderPath": "/zips",
+                                        "name": "@items('For_each')?['Name']",
+                                        "queryParametersSingleEncoded": true
+                                    }
+                                },
+                                "runAfter": {},
+                                "runtimeConfiguration": {
+                                    "contentTransfer": {
+                                        "transferMode": "Chunked"
+                                    }
+                                },
+                                "type": "ApiConnection"
+                            },
+                            "Delete_blob": {
+                                "inputs": {
+                                    "host": {
+                                        "connection": {
+                                            "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                        }
+                                    },
+                                    "method": "delete",
+                                    "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent('zips/',items('For_each')?['Name']))}"
+                                },
+                                "runAfter": {
+                                    "Extract_archive_to_folder": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "ApiConnection"
+                            },
+                            "Extract_archive_to_folder": {
+                                "inputs": {
+                                    "host": {
+                                        "connection": {
+                                            "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                        }
+                                    },
+                                    "method": "post",
+                                    "path": "/datasets/default/extractFolderV2",
+                                    "queries": {
+                                        "destination": "/xmls",
+                                        "overwrite": true,
+                                        "queryParametersSingleEncoded": true,
+                                        "source": "@body('Create_blob')?['Path']"
+                                    }
+                                },
+                                "runAfter": {
+                                    "Create_blob": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "ApiConnection"
+                            }
+                        },
+                        "else": {
+                            "actions": {
+                                "Condition_2": {
+                                    "actions": {
+                                        "Create_GZ_blob": {
+                                            "inputs": {
+                                                "body": "@base64ToBinary(items('For_each')?['ContentBytes'])",
+                                                "host": {
+                                                    "connection": {
+                                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                                    }
+                                                },
+                                                "method": "post",
+                                                "path": "/datasets/default/files",
+                                                "queries": {
+                                                    "folderPath": "/gzs",
+                                                    "name": "@items('For_each')?['Name']",
+                                                    "queryParametersSingleEncoded": true
+                                                }
+                                            },
+                                            "runAfter": {},
+                                            "runtimeConfiguration": {
+                                                "contentTransfer": {
+                                                    "transferMode": "Chunked"
+                                                }
+                                            },
+                                            "type": "ApiConnection"
+                                        }
+                                    },
+                                    "expression": {
+                                        "and": [
+                                            {
+                                                "endsWith": [
+                                                    "@items('For_each')?['Name']",
+                                                    ".gz"
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    "runAfter": {},
+                                    "type": "If"
+                                }
+                            }
+                        },
+                        "expression": {
+                            "or": [
+                                {
+                                    "endsWith": [
+                                        "@items('For_each')?['Name']",
+                                        ".zip"
+                                    ]
+                                }
+                            ]
+                        },
+                        "runAfter": {},
+                        "type": "If"
+                    }
+                },
+                "foreach": "@triggerBody()?['Attachments']",
+                "runAfter": {},
+                "type": "Foreach"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "When_a_new_email_arrives_in_a_shared_mailbox": {
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['office365']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/SharedMailbox/Mail/OnNewEmail",
+                    "queries": {
+                        "folderId": "Inbox",
+                        "hasAttachments": true,
+                        "importance": "Any",
+                        "includeAttachments": true,
+                        "mailboxAddress": "<EmailAddress>",
+                        "subjectFilter": "Report domain:"
+                    }
+                },
+                "recurrence": {
+                    "frequency": "Minute",
+                    "interval": 3
+                },
+                "splitOn": "@triggerBody()?['value']",
+                "type": "ApiConnection"
+            }
+        }
+    }
