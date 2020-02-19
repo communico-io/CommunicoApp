@@ -1,0 +1,19 @@
+{
+  "bindings": [
+    {
+      "name": "InputBlob",
+      "type": "blobTrigger",
+      "direction": "in",
+      "path": "attachments/{name}.gz",
+      "connection": "emailauthentication_STORAGE"
+    },
+    {
+      "name": "OutputBlob",
+      "type": "blob",
+      "direction": "out",
+      "path": "xmls/{name}",
+      "connection": "emailauthentication_STORAGE"
+    }
+  ],
+  "disabled": false
+}
