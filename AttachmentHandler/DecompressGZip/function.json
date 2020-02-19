@@ -4,7 +4,7 @@
       "name": "InputBlob",
       "type": "blobTrigger",
       "direction": "in",
-      "path": "attachments/{name}.gz",
+      "path": "gzs/{name}.gz",
       "connection": "emailauthentication_STORAGE"
     },
     {
